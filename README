@@ -1,0 +1,127 @@
+===============================================================================
+===============================================================================
+
+================================== Tema 1 PC ==================================
+============================== Costea Mihai 322CB =============================
+===============================================================================
+
+===============================================================================
+
+Rezolvarea temei:
+
+	Am implementat un protocol de tipul Stop and wait pentru a rezolva tema.
+Ideea expusa este transferul de fisiere intre 2 entitati iar mesajele se pot
+corupe, in sensul sa se transmite informatia eronat doar in sensul
+sender -> receivrer iar pierderea de pachete este in sensul sender <-> receiver.
+Daca se transmite o informatie eronata prin intermediul unui cod crc care este
+calculat si transmis odata cu mesajul se poate verifica validitatea acestuia de
+catre receiver prin recalcularea crc-ului pe mesaj si compararea rezultatelor
+obtinute. In cazul in care pachetele se pierd sau nu ajung la timp si unul 
+dintre entitati primeste timeout la receptionarea unui mesaj, acesta va 
+retransmite ultimul mesaj primit, asigurandu-se ca nu mesajul trimis anterior
+de acesta va ajunge la cealalta entitate.
+	Receiverul in caz de primeste un mesaj trimite un mesaj de confirmare sa 
+anunte senderul despre starea sa curenta.
+
+===============================================================================
+
+Strategia folosita:
+
+Am definit 3 structuri pentru a modela pachetele pe care le trimit pe retea.
+Din cauza ca pachetele au dimensiuni variabile nu am putut sa folosesc un 
+singur struct, deoarece trebuie sa aloc memorie dinamic pentru campul data, iar
+daca pun un pointer pe care il aloc dinamic in structura nu ajuta pentru ca 
+atunci cand copiez memoria o sa cpiez adresa pointerului si nu continutul.
+
+Asa ca, cand trimit un pachet o sa trebuiasca sa aloc mereu data separat, fata
+de header si footer, dupa le ordonez si le scriu in campul payload din structura
+msg. Suma de control o fac pe toti bitii mai putin bitii din footer pentru ca
+nu are rost. Nici macar nu verific daca MARK a fost modificat sau nu pentru ca 
+nu este de interes (Poate intr-un caz real cand as fi dorit sa ma folosesc de
+terminator). 
+
+Trimiterea pachetelor se face in felul urmator, senderul constuiste pachetul si
+il triite receiverului si porneste timerul de a primi raspuns daca nu primeste
+raspuns retrimite pachetul si face acest lucru de 3 ori dupa care isi va incheia
+executia. Analog acelas procedeu este replicat de receiver pentru raspunsurile
+la pachetele pe care senderul le trimite.
+Daca un pachet a fost trimis cu erori receiverul va trimite un mesaj NAK ca sa
+istiinteze senderul ca nu a primit informatia ok.
+Packetele isi vor updata mereu numerele de secventa mai putin in cazul in care
+pachetele nu se receptioneza caz in care ramane acelas numar de secventa ca 
+entitatea care primeste pachetul sa stie la ce mesaj i se raspunde si ca mesajul
+pe care l-a primit nu este defapt un mesaj care a avut delay prea mare si nu a
+ajuns la timp.
+
+===============================================================================
+
+Structuri folosite:
+
+paket_header este o structura care contine toate metadatele paketului de tip
+mini-kermit, in oridinea prezentata in enunt.
+
+paket_footer este o structura care contine informatiile de dupa campul data.
+
+S_data este o structura care contine data pe care trebuie sa o contina un 
+pacht de tip S.
+
+===============================================================================
+
+Functii folosite:
+
+In ksender.c:
+
+->read_data: functie care citeste din fisier si scrie intr-un buffer pe care il
+returneaza ceea ce a citit.
+
+->transmitere_mesaj: functie care retrimite un mesaj pana cad acesta a fost 
+trimis cu succes si a primit o confirmare ACK ori pana cand primeste timeout
+de 3 ori la rand incercand sa transmita mesajul.
+
+->deliver_message: functie care trimite un mesaj si asteapta o confirmare pentru
+acesta. Daca nu primeste nimic repeta procesul de 3 ori iar dupa returneaza eroare
+(-1).
+
+-------------------------------------------------------------------------------
+
+In kreceiver.c:
+
+->set_type_msg: analizeaza fisierul pe care l-a primti de la sender pentru a
+isi dea seama daca trebuie sa raspunda cu ACK sau NAK. 
+
+-> get_file_name primeste mesajul trimis de sender si extrage din acesta din
+campul data numele fisierului transms de sender pe care il prefixeaza cu
+stringul "recv_".
+
+->receive_messages: functie primeste mesaje de la sender, retine ultimul mesaj
+transmis si raspunde adecvat la acestea in functie de circumstantele in care se
+afla conform cu ceea ce am prezentat mai sus. Am ales sa declar cateva variabile
+statice, pentru a nu le mai da mereu ca parametru si am simtit o oarecare 
+usurinta in a face functia recursiva decat sa construiesc o bucla in main care
+o tot apeleaza. Din cauza ca s-ar putea apela de destul de multe ori si s-ar 
+putea sa supra incarc stiva am optimizat pe coada codul.
+
+
+-------------------------------------------------------------------------------
+
+In lib.c:
+
+Aici am pus functiile pe care le folosesc si kreciver si ksender. Ele sunt 
+declarate in continuae in lib.h, care este inclus by default in acestea.
+
+->construct_data_S functie care construieste conform parametrilor trimisi 
+campurile care s-ar puta modifica din campul data alpachetului de tip S din
+protocolul mimi-kermit. Restul de informatie a fost initializata cu valoarea
+default conform cerintei.
+
+->initialize_header: functie care initializeaza un header deja alocat cu 
+valorile care ii sunt date ca paramerii prin efect lateral.
+
+->init_msg: functie care pune cap la cap toate informatiile dintr-un pachet
+punandu-le in campul payload al unui mesaj de tip msg.
+
+-------------------------------------------------------------------------------
+
+===============================================================================
+===============================================================================
+
