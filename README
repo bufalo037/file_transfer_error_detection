@@ -1,127 +1,121 @@
 ===============================================================================
-===============================================================================
-
-================================== Tema 1 PC ==================================
-============================== Costea Mihai 322CB =============================
+============================== Costea Mihai  ==================================
 ===============================================================================
 
 ===============================================================================
 
-Rezolvarea temei:
+The exercise solution:
 
-	Am implementat un protocol de tipul Stop and wait pentru a rezolva tema.
-Ideea expusa este transferul de fisiere intre 2 entitati iar mesajele se pot
-corupe, in sensul sa se transmite informatia eronat doar in sensul
-sender -> receivrer iar pierderea de pachete este in sensul sender <-> receiver.
-Daca se transmite o informatie eronata prin intermediul unui cod crc care este
-calculat si transmis odata cu mesajul se poate verifica validitatea acestuia de
-catre receiver prin recalcularea crc-ului pe mesaj si compararea rezultatelor
-obtinute. In cazul in care pachetele se pierd sau nu ajung la timp si unul 
-dintre entitati primeste timeout la receptionarea unui mesaj, acesta va 
-retransmite ultimul mesaj primit, asigurandu-se ca nu mesajul trimis anterior
-de acesta va ajunge la cealalta entitate.
-	Receiverul in caz de primeste un mesaj trimite un mesaj de confirmare sa 
-anunte senderul despre starea sa curenta.
-
-===============================================================================
-
-Strategia folosita:
-
-Am definit 3 structuri pentru a modela pachetele pe care le trimit pe retea.
-Din cauza ca pachetele au dimensiuni variabile nu am putut sa folosesc un 
-singur struct, deoarece trebuie sa aloc memorie dinamic pentru campul data, iar
-daca pun un pointer pe care il aloc dinamic in structura nu ajuta pentru ca 
-atunci cand copiez memoria o sa cpiez adresa pointerului si nu continutul.
-
-Asa ca, cand trimit un pachet o sa trebuiasca sa aloc mereu data separat, fata
-de header si footer, dupa le ordonez si le scriu in campul payload din structura
-msg. Suma de control o fac pe toti bitii mai putin bitii din footer pentru ca
-nu are rost. Nici macar nu verific daca MARK a fost modificat sau nu pentru ca 
-nu este de interes (Poate intr-un caz real cand as fi dorit sa ma folosesc de
-terminator). 
-
-Trimiterea pachetelor se face in felul urmator, senderul constuiste pachetul si
-il triite receiverului si porneste timerul de a primi raspuns daca nu primeste
-raspuns retrimite pachetul si face acest lucru de 3 ori dupa care isi va incheia
-executia. Analog acelas procedeu este replicat de receiver pentru raspunsurile
-la pachetele pe care senderul le trimite.
-Daca un pachet a fost trimis cu erori receiverul va trimite un mesaj NAK ca sa
-istiinteze senderul ca nu a primit informatia ok.
-Packetele isi vor updata mereu numerele de secventa mai putin in cazul in care
-pachetele nu se receptioneza caz in care ramane acelas numar de secventa ca 
-entitatea care primeste pachetul sa stie la ce mesaj i se raspunde si ca mesajul
-pe care l-a primit nu este defapt un mesaj care a avut delay prea mare si nu a
-ajuns la timp.
+	I implemented a Stop and wait type protocol to solve the exercise. The 
+presented idea is the transfer of files between 2 entities and the messages 
+can be corrupted, in the sense that the information is transmitted in a wrong
+way only in the sender -> receiver direction and the loss of packets is in the
+sender <-> receiver direction. The sender puts a crc code along with the messege.Its 
+validity can be verified by the receiver through the recalculation of the crc
+on the message and by comparing the obtained results. If the packets are lost
+or they don't make it in time and one of the entities receives a timeout on the
+message receival, it will resend the last received message, making sure that the 
+message previously sent by it reaches the other entity.
+	In case the receiver receives a message, it sends a confirmation message to 
+announce the sender about its current state.
 
 ===============================================================================
 
-Structuri folosite:
+Used strategy:
 
-paket_header este o structura care contine toate metadatele paketului de tip
-mini-kermit, in oridinea prezentata in enunt.
+I defined 3 structures to model the packets that I send on the network. Because
+of the fact that the packets have variable sizes, I couldn't use a single
+struct, because I have to dynamically allocate memory for the data field, and if 
+I put a pointer that I allocate dynamically in the structure, it won't help
+because when I copy the memory, I copy the pointer's address, not the content.
 
-paket_footer este o structura care contine informatiile de dupa campul data.
+So, when I send a packet, I will always have to allocate the data separately, by 
+the  header and footer, after I order them and I write them in the payload field
+from the msg structure. I make the control sum on all the bits, except the bits
+from the footer because that is pointless. I don't even check if MARK was
+modified or not because it is not of interest (Maybe in a real case when I 
+would've wanted to use the terminator).
 
-S_data este o structura care contine data pe care trebuie sa o contina un 
-pacht de tip S.
+Packets sending is done like this: the sender builds a packet and sends it 
+to the receiver and starts the timer for response receival. If it doesn't 
+receive a response, it will resend the packet and make this process 3 times. 
+Afterwards, it will finish its execution. The analogous procedure is replicated
+by the reciever for the responses to the packets sent by sender.
+If a packet was sent with errors, the receiver will send a NAK message to let 
+the sender know it did not receive the right information.
+The packets will always update their own sequence numbers, except for the case
+in which packets are not received. In this case, the sequence number remains the
+same in order to let the entity that receives the message know which one of 
+his message is being answered and if the message it received isn't actually
+a message that had a big delay and didn't make in time. 
 
 ===============================================================================
 
-Functii folosite:
+Used structures: 
+
+paket_header is a structure that contains all the metadata of the mini-kermit 
+type paket, in the order presented in the exercise. 
+
+paket_footer is a structure that contains all the information after the data 
+field.
+
+S_data is a structure that contains data that a type S packet must contain. 
+
+===============================================================================
+Used functions:
 
 In ksender.c:
 
-->read_data: functie care citeste din fisier si scrie intr-un buffer pe care il
-returneaza ceea ce a citit.
+->read_data: a function that reads from a file and writes what it read inside a
+buffer that it returns.
 
-->transmitere_mesaj: functie care retrimite un mesaj pana cad acesta a fost 
-trimis cu succes si a primit o confirmare ACK ori pana cand primeste timeout
-de 3 ori la rand incercand sa transmita mesajul.
+->transmitere_mesaj: a function that resends a message until it is successfully
+sent and it receives an ACK confirmation or until it receives timeout 3 times 
+trying to send the message.
 
-->deliver_message: functie care trimite un mesaj si asteapta o confirmare pentru
-acesta. Daca nu primeste nimic repeta procesul de 3 ori iar dupa returneaza eroare
-(-1).
+->deliver_message: a function that sends a message and waits for its 
+confirmation. If it doesn't receive anything, it repeats the process 3 times 
+and then it returns error (-1).
 
--------------------------------------------------------------------------------
+===============================================================================
 
 In kreceiver.c:
 
-->set_type_msg: analizeaza fisierul pe care l-a primti de la sender pentru a
-isi dea seama daca trebuie sa raspunda cu ACK sau NAK. 
+->set_type_msg: it analyzes the file that it received from the sender to figure 
+out if it needs to answer with ACK or NAK.
 
--> get_file_name primeste mesajul trimis de sender si extrage din acesta din
-campul data numele fisierului transms de sender pe care il prefixeaza cu
-stringul "recv_".
+-> get_file_name: it receives the message sent by the sender and extracts from 
+its data field the file name sent by the sender that it prefixes with the "recv_" 
+string.
 
-->receive_messages: functie primeste mesaje de la sender, retine ultimul mesaj
-transmis si raspunde adecvat la acestea in functie de circumstantele in care se
-afla conform cu ceea ce am prezentat mai sus. Am ales sa declar cateva variabile
-statice, pentru a nu le mai da mereu ca parametru si am simtit o oarecare 
-usurinta in a face functia recursiva decat sa construiesc o bucla in main care
-o tot apeleaza. Din cauza ca s-ar putea apela de destul de multe ori si s-ar 
-putea sa supra incarc stiva am optimizat pe coada codul.
-
+->receive_messages: a function that receives messages from the sender, retains 
+the last message sent and responds adequately to it depending on the 
+circumstances in which it stands according to what I wrote above. I chose to 
+declare a couple of statistical variables in order to not always give them as 
+parameters. I found it less difficult to make the function recursive than to 
+build a loop in the main that it keeps calling. Because the stack could be 
+called too many times and it could be overloaded, I decided to optimize the
+code on the queue.
 
 -------------------------------------------------------------------------------
 
 In lib.c:
 
-Aici am pus functiile pe care le folosesc si kreciver si ksender. Ele sunt 
-declarate in continuae in lib.h, care este inclus by default in acestea.
+I placed the functions that kreceiver and ksender use here. They are declared in
+lib.h, which is included in it by default. 
 
-->construct_data_S functie care construieste conform parametrilor trimisi 
-campurile care s-ar puta modifica din campul data alpachetului de tip S din
-protocolul mimi-kermit. Restul de informatie a fost initializata cu valoarea
-default conform cerintei.
+->construct_data_S: a function that builds, according to the sent parameters,
+the fields that might be modified in the data field of the S type packet from 
+the mimi-kermit protocol. The rest of the information was initialized with the 
+default value, according to the exercise.
 
-->initialize_header: functie care initializeaza un header deja alocat cu 
-valorile care ii sunt date ca paramerii prin efect lateral.
+->initialize_header: a function that initializes a header already allocated with
+values that are given to it as parameters through lateral effect.
 
-->init_msg: functie care pune cap la cap toate informatiile dintr-un pachet
-punandu-le in campul payload al unui mesaj de tip msg.
+->init_msg: a function that pieces together all the information from a packet
+by placing them in the payload field of a msg type message.
 
 -------------------------------------------------------------------------------
 
 ===============================================================================
 ===============================================================================
-
